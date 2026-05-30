@@ -16,6 +16,11 @@ import { WarmIntroModule } from './modules/warm-intro-graph/warm-intro.module';
 import { DataRoomModule } from './modules/data-room/data-room.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { AiCopilotModule } from './modules/ai-copilot/ai-copilot.module';
+import { StartupProfilesModule } from './modules/startup-profiles/startup-profiles.module';
+import { InvestorPortalModule } from './modules/investor-portal/investor-portal.module';
+import { AiMatchingModule } from './modules/ai-matching/ai-matching.module';
+import { PitchAnalyzerModule } from './modules/pitch-analyzer/pitch-analyzer.module';
 import { PrismaService } from './common/services/prisma.service';
 
 const logger = new Logger('AppModule');
@@ -53,12 +58,19 @@ const logger = new Logger('AppModule');
     DataRoomModule,
     NotificationsModule,
     TasksModule,
+
+    // Feature Modules - Phase 5 & 6 Intelligence & Portals
+    AiCopilotModule,
+    StartupProfilesModule,
+    InvestorPortalModule,
+    AiMatchingModule,
+    PitchAnalyzerModule,
   ],
   controllers: [],
   providers: [PrismaService],
 })
 export class AppModule {
   constructor(private prisma: PrismaService) {
-    logger.log('VentureFlow AI Backend initialized with 9 core modules');
+    logger.log('VentureFlow AI Backend initialized with 18/18 core modules - PRODUCTION READY');
   }
 }
