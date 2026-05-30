@@ -1,9 +1,15 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
+import { AuthModule } from './auth/auth.module';
+import { InvestorsModule } from './modules/investors/investors.module';
+import { StartupsModule } from './modules/startups/startups.module';
+import { CrmModule } from './modules/crm/crm.module';
+import { PrismaService } from './common/services/prisma.service';
+
+const logger = new Logger('AppModule');
 
 @Module({
   imports: [
@@ -22,14 +28,17 @@ import { join } from 'path';
       plugins: [],
     }),
 
-    // Database
-    // TypeOrmModule configuration will go here
-    // For now, we'll use Prisma instead of TypeORM
-
-    // Core modules
-    // Import feature modules here
+    // Feature Modules
+    AuthModule,
+    InvestorsModule,
+    StartupsModule,
+    CrmModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [PrismaService],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(private prisma: PrismaService) {
+    logger.log('VentureFlow AI Backend initialized');
+  }
+}
