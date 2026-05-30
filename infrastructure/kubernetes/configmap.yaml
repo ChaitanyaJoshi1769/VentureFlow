@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ventureflow-config
+  namespace: ventureflow
+data:
+  elasticsearch-node: "http://elasticsearch:9200"
+  log-level: "info"
+  api-version: "v1"
+  api-base-url: "https://api.ventureflow.io"
+  frontend-url: "https://ventureflow.io"
+  investor-portal-url: "https://investor.ventureflow.io"
+  max-request-size: "50mb"
+  cors-origin: "https://ventureflow.io,https://investor.ventureflow.io"
+  session-timeout: "3600"
+  token-expiry: "86400"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ventureflow-db-init
+  namespace: ventureflow
+data:
+  init.sql: |
+    -- VentureFlow database initialization
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pgvector";
+    CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+    -- Initialize search indexes
+    CREATE INDEX idx_startup_name_search ON startup USING gin (name gin_trgm_ops);
+    CREATE INDEX idx_investor_name_search ON investor USING gin (name gin_trgm_ops);
