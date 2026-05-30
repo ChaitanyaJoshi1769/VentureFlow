@@ -1,0 +1,814 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/@prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Identity & Access Management
+// ============================================
+
+model User {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  passwordHash          String?
+  firstName             String
+  lastName              String
+  avatar                String?
+  bio                   String?
+  title                 String?
+  socialLinks           Json     @default("{}")
+
+  // Authentication
+  emailVerified         DateTime?
+  lastSignIn            DateTime?
+  totpEnabled           Boolean  @default(false)
+  totpSecret            String?
+
+  // Settings
+  preferredLanguage     String   @default("en")
+  timezone              String   @default("UTC")
+  settings              Json     @default("{}")
+
+  // Organization & Roles
+  defaultOrganization   Organization? @relation("defaultOrg", fields: [defaultOrganizationId], references: [id])
+  defaultOrganizationId String?
+  role                  String   @default("user")
+
+  // Status
+  status                String   @default("active")
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  organizationMembers   OrganizationMember[]
+  activities            Activity[] @relation("initiatedBy")
+  notes                 Note[]
+  aiConversations       AiConversation[]
+  tasks                 Task[]
+  tasksAssigned         Task[] @relation("assignedTo")
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+
+  @@index([email])
+  @@index([defaultOrganizationId])
+  @@index([deletedAt])
+}
+
+model Organization {
+  id                    String   @id @default(cuid())
+  name                  String
+  slug                  String   @unique
+  description           String?
+  logo                  String?
+  website               String?
+
+  // Organization type
+  type                  String   // 'startup', 'vc_firm', 'angel_group', 'accelerator'
+
+  // Settings
+  features              Json     @default("{}")
+  settings              Json     @default("{}")
+
+  // Status
+  status                String   @default("active")
+  subscriptionTier      String   @default("free")
+  stripeCustomerId      String?
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  defaultUsersOrg       User[] @relation("defaultOrg")
+  members               OrganizationMember[]
+  teams                 Team[]
+  investors             Investor[]
+  startups              Startup[]
+  crmInvestors          CrmInvestor[]
+  activities            Activity[]
+  notes                 Note[]
+  pitchDecks            PitchDeck[]
+  documents             Document[]
+  emailCampaigns        EmailCampaign[]
+  emails                Email[]
+  aiConversations       AiConversation[]
+  analyticEvents        AnalyticsEvent[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  tasks                 Task[]
+
+  @@index([slug])
+  @@index([type])
+  @@index([deletedAt])
+}
+
+model Team {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  name                  String
+  description           String?
+  avatar                String?
+
+  // Permissions
+  permissions           Json     @default("{}")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  members               OrganizationMember[]
+
+  @@index([organizationId])
+  @@unique([organizationId, name])
+}
+
+model OrganizationMember {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  user                  User     @relation(fields: [userId], references: [id])
+  userId                String
+  team                  Team?    @relation(fields: [teamId], references: [id])
+  teamId                String?
+
+  // Role and permissions
+  role                  String   // 'owner', 'admin', 'member', 'viewer'
+  permissions           Json     @default("{}")
+
+  // Status
+  status                String   @default("active") // 'active', 'invited', 'inactive'
+  invitedAt             DateTime?
+  acceptedAt            DateTime?
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([teamId])
+  @@unique([organizationId, userId])
+}
+
+// ============================================
+// Investor Domain
+// ============================================
+
+model Investor {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+
+  // Profile
+  firstName             String
+  lastName              String
+  email                 String?
+  phoneNumber           String?
+  title                 String?
+  firm                  Investor? @relation("firmInvestors", fields: [firmId], references: [id])
+  firmId                String?
+
+  // Professional info
+  bio                   String?
+  avatar                String?
+  linkedinUrl           String?
+  twitterUrl            String?
+  angellistUrl          String?
+
+  // Investment info
+  geography             Json? // { countries: ['US', 'IN'], states: ['CA', 'NY'] }
+  sectors               Json   @default("[]")
+  stages                Json   @default("[]")
+  checkSizeMin          Decimal?
+  checkSizeMax          Decimal?
+  investmentThesis      String?
+  leadInvestor          Boolean @default(false)
+
+  // Engagement
+  tags                  Json   @default("[]")
+  customFields          Json   @default("{}")
+  status                String @default("active") // 'warm', 'cold', 'interested', 'not_interested'
+  lastEngagementAt      DateTime?
+
+  // Data
+  portfolio             Json   @default("[]")
+  recentInvestments     Json   @default("[]")
+  metrics               Json   @default("{}")
+
+  // Metadata
+  source                String? // 'linkedin_import', 'crunchbase', 'manual', 'api'
+  sourceId              String?
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  childInvestors        Investor[] @relation("firmInvestors")
+  embedding             InvestorEmbedding?
+  crmRecords            CrmInvestor[]
+  deckViews             DeckView[]
+
+  @@index([organizationId])
+  @@index([firmId])
+  @@index([email])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model InvestorEmbedding {
+  id                    String   @id @default(cuid())
+  investor              Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  investorId            String   @unique
+
+  // Embeddings for semantic search
+  profileEmbedding      Unsupported("vector(1536)")?
+  thesisEmbedding       Unsupported("vector(1536)")?
+  portfolioEmbedding    Unsupported("vector(1536)")?
+
+  // Metadata
+  embeddingModel        String   @default("text-embedding-3-small")
+  embeddedAt            DateTime @default(now())
+
+  @@index([investorId])
+}
+
+// ============================================
+// Startup Domain
+// ============================================
+
+model Startup {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+
+  // Profile
+  name                  String
+  slug                  String?
+  description           String?
+  logo                  String?
+  website               String?
+
+  // Business info
+  industry              String?
+  subIndustry           String?
+  elevatorPitch         String?
+
+  // Traction
+  revenue               Decimal?
+  mrr                   Decimal?
+  users                 Decimal?
+  growthRate            Decimal?
+
+  // Fundraising
+  currentStage          String? // 'idea', 'mvp', 'seed', 'series_a', etc.
+  targetRound           String?
+  targetAmount          Decimal?
+  raisedToDate          Decimal?
+
+  // Team
+  founderIds            Json   @default("[]")
+  teamSize              Decimal?
+
+  // Media
+  videoPitch            String?
+  pitchDeckUrl          String?
+
+  // Privacy
+  visibility            String @default("private") // 'public', 'private', 'anonymous'
+
+  // Metadata
+  customFields          Json   @default("{}")
+  tags                  Json   @default("[]")
+  metrics               Json   @default("{}")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  embedding             StartupEmbedding?
+  crmInvestors          CrmInvestor[]
+  activities            Activity[]
+  notes                 Note[]
+  pitchDecks            PitchDeck[]
+  documents             Document[]
+  emailCampaigns        EmailCampaign[]
+  aiConversations       AiConversation[]
+
+  @@index([organizationId])
+  @@index([slug])
+  @@index([visibility])
+  @@index([deletedAt])
+}
+
+model StartupEmbedding {
+  id                    String   @id @default(cuid())
+  startup               Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  startupId             String   @unique
+
+  profileEmbedding      Unsupported("vector(1536)")?
+  pitchEmbedding        Unsupported("vector(1536)")?
+
+  embeddingModel        String   @default("text-embedding-3-small")
+  embeddedAt            DateTime @default(now())
+
+  @@index([startupId])
+}
+
+// ============================================
+// CRM Domain
+// ============================================
+
+model CrmInvestor {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  startup               Startup  @relation(fields: [startupId], references: [id])
+  startupId             String
+  investor              Investor @relation(fields: [investorId], references: [id])
+  investorId            String
+
+  // Pipeline stage
+  stage                 String   @default("target")
+
+  // Scoring
+  relationshipScore     Decimal? @default(0)
+  temperatureScore      Decimal? @default(0)
+  fitScore              Decimal? @default(0)
+
+  // Engagement
+  firstContactedAt      DateTime?
+  lastEngagementAt      DateTime?
+  nextFollowUpAt        DateTime?
+
+  // Data
+  notes                 String?
+  customFields          Json     @default("{}")
+  tags                  Json     @default("[]")
+
+  // AI
+  aiSummary             String?
+  aiRecommendations     Json     @default("{}")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  activities            Activity[]
+  notes                 Note[]
+
+  @@index([stage])
+  @@index([startupId])
+  @@index([investorId])
+  @@index([relationshipScore])
+  @@unique([startupId, investorId])
+}
+
+model Activity {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  startup               Startup? @relation(fields: [startupId], references: [id])
+  startupId             String?
+  crmInvestor           CrmInvestor? @relation(fields: [crmInvestorId], references: [id])
+  crmInvestorId         String?
+
+  type                  String   // 'email_sent', 'email_received', 'call', 'meeting', 'note_added', 'status_changed'
+
+  title                 String
+  description           String?
+
+  // Participants
+  initiatedBy           User     @relation("initiatedBy", fields: [initiatedById], references: [id])
+  initiatedById         String
+  participants          Json     @default("[]")
+
+  // Timeline
+  activityDate          DateTime
+  duration              Decimal?
+
+  // Results
+  outcome               String?
+  nextSteps             String?
+
+  // Attachments
+  attachmentUrls        Json     @default("[]")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+
+  @@index([crmInvestorId])
+  @@index([startupId])
+  @@index([type])
+  @@index([activityDate])
+}
+
+model Note {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  crmInvestor           CrmInvestor? @relation(fields: [crmInvestorId], references: [id])
+  crmInvestorId         String?
+  startup               Startup? @relation(fields: [startupId], references: [id])
+  startupId             String?
+
+  content               String
+  contentHtml           String?
+
+  createdBy             User     @relation(fields: [createdById], references: [id])
+  createdById           String
+
+  // Metadata
+  tags                  Json     @default("[]")
+  mentions              Json     @default("[]")
+  attachments           Json     @default("[]")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([crmInvestorId])
+  @@index([startupId])
+}
+
+// ============================================
+// Pitch Deck Tracking
+// ============================================
+
+model PitchDeck {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  startup               Startup  @relation(fields: [startupId], references: [id])
+  startupId             String
+
+  title                 String
+  description           String?
+
+  // File storage
+  originalFileName      String?
+  fileUrl               String?
+  fileSize              Decimal?
+  fileType              String? // 'pdf', 'pptx'
+  s3Key                 String?
+
+  // Versions
+  version               Decimal  @default(1)
+  parentDeck            PitchDeck? @relation("parentDeck", fields: [parentDeckId], references: [id])
+  parentDeckId          String?
+
+  // Sharing
+  shareToken            String?  @unique
+  shareTokenExpiry      DateTime?
+  isPublic              Boolean  @default(false)
+  requiresPassword      Boolean  @default(false)
+  passwordHash          String?
+
+  // Analytics
+  totalViews            Decimal  @default(0)
+  uniqueViewers         Decimal  @default(0)
+  averageTimeSpent      Decimal?
+
+  // Metadata
+  slideCount            Decimal?
+  thumbnail             String?
+  tags                  Json     @default("[]")
+
+  // Status
+  status                String   @default("draft") // 'draft', 'published', 'archived'
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  childDecks            PitchDeck[] @relation("parentDeck")
+  views                 DeckView[]
+
+  @@index([startupId])
+  @@index([shareToken])
+  @@index([deletedAt])
+}
+
+model DeckView {
+  id                    String   @id @default(cuid())
+  deck                  PitchDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  deckId                String
+  investor              Investor? @relation(fields: [investorId], references: [id])
+  investorId            String?
+  viewerEmail           String?
+
+  // Device & location
+  userAgent             String?
+  ipAddress             String?
+  country               String?
+  city                  String?
+  deviceType            String?
+
+  // Engagement
+  viewDuration          Decimal?
+  slidesViewed          Json     @default("[]")
+  currentSlide          Decimal?
+
+  // Heatmap
+  heatmapData           Json?
+
+  viewedAt              DateTime @default(now())
+  createdAt             DateTime @default(now())
+
+  @@index([deckId])
+  @@index([investorId])
+  @@index([viewedAt])
+}
+
+// ============================================
+// Documents & Data Room
+// ============================================
+
+model Document {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  startup               Startup  @relation(fields: [startupId], references: [id])
+  startupId             String
+
+  name                  String
+  description           String?
+
+  type                  String? // 'cap_table', 'financial_model', 'legal', 'pitch', etc.
+
+  // File
+  fileUrl               String?
+  s3Key                 String?
+  fileSize              Decimal?
+
+  // Access
+  accessLevel           String   @default("private")
+  allowedInvestorIds    Json     @default("[]")
+
+  // Version
+  version               Decimal  @default(1)
+  parentDocument        Document? @relation("parentDoc", fields: [parentDocumentId], references: [id])
+  parentDocumentId      String?
+
+  // Metadata
+  tags                  Json     @default("[]")
+  watermarked           Boolean  @default(false)
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  childDocuments        Document[] @relation("parentDoc")
+
+  @@index([startupId])
+  @@index([type])
+}
+
+// ============================================
+// Email & Outreach
+// ============================================
+
+model EmailCampaign {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  startup               Startup  @relation(fields: [startupId], references: [id])
+  startupId             String
+
+  name                  String
+  description           String?
+
+  // Template
+  subjectLine           String?
+  emailBody             String?
+  emailHtml             String?
+
+  // Targeting
+  targetInvestorIds     Json     @default("[]")
+  filters               Json     @default("{}")
+
+  // Scheduling
+  scheduledFor          DateTime?
+  sentAt                DateTime?
+
+  // Personalization
+  personalizeFields     Json     @default("[]")
+
+  // Analytics
+  sentCount             Decimal  @default(0)
+  openCount             Decimal  @default(0)
+  clickCount            Decimal  @default(0)
+  replyCount            Decimal  @default(0)
+
+  openRate              Decimal?
+  clickRate             Decimal?
+
+  status                String   @default("draft") // 'draft', 'scheduled', 'sent'
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  emails                Email[]
+
+  @@index([startupId])
+  @@index([status])
+}
+
+model Email {
+  id                    String   @id @default(cuid())
+  campaign              EmailCampaign? @relation(fields: [campaignId], references: [id])
+  campaignId            String?
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+
+  to                    String
+  from                  String
+  subject               String?
+  body                  String?
+
+  // Tracking
+  sentAt                DateTime?
+  openedAt              DateTime?
+  clickedAt             DateTime?
+  bouncedAt             DateTime?
+  unsubscribedAt        DateTime?
+
+  // Analytics
+  openCount             Decimal  @default(0)
+  clickCount            Decimal  @default(0)
+
+  links                 Json     @default("[]")
+
+  status                String   @default("pending")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+// ============================================
+// AI & Analytics
+// ============================================
+
+model AiConversation {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  user                  User     @relation(fields: [userId], references: [id])
+  userId                String
+  startup               Startup? @relation(fields: [startupId], references: [id])
+  startupId             String?
+
+  title                 String?
+
+  // Conversation data
+  messages              Json     @default("[]")
+
+  // Context
+  context               Json     @default("{}")
+
+  // Memory
+  summaryKey            String?
+  keyTakeaways          Json     @default("[]")
+
+  status                String   @default("active")
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([startupId])
+}
+
+model AnalyticsEvent {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  user                  User?    @relation(fields: [userId], references: [id])
+  userId                String?
+
+  eventName             String
+  eventData             Json     @default("{}")
+
+  // Properties
+  properties            Json     @default("{}")
+
+  createdAt             DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([eventName])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  user                  User     @relation(fields: [userId], references: [id])
+  userId                String
+
+  action                String
+  entityType            String?
+  entityId              String?
+
+  changes               Json     @default("{}")
+
+  ipAddress             String?
+  userAgent             String?
+
+  createdAt             DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+// ============================================
+// Notifications
+// ============================================
+
+model Notification {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  user                  User     @relation(fields: [userId], references: [id])
+  userId                String
+
+  type                  String
+  title                 String?
+  message               String?
+
+  relatedEntityType     String?
+  relatedEntityId       String?
+
+  channels              Json     @default("[\"in_app\"]")
+
+  // Read status
+  readAt                DateTime?
+
+  // Delivery
+  deliveredAt           DateTime?
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// Tasks & Workflows
+// ============================================
+
+model Task {
+  id                    String   @id @default(cuid())
+  organization          Organization @relation(fields: [organizationId], references: [id])
+  organizationId        String
+  createdBy             User     @relation(fields: [createdById], references: [id])
+  createdById           String
+  assignedTo            User?    @relation("assignedTo", fields: [assignedToId], references: [id])
+  assignedToId          String?
+
+  title                 String
+  description           String?
+
+  // Priority & Due Date
+  priority              String   @default("medium")
+  dueDate               DateTime?
+
+  // Status
+  status                String   @default("open")
+
+  // Relations
+  relatedEntityType     String?
+  relatedEntityId       String?
+
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  completedAt           DateTime?
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([status])
+}

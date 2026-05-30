@@ -1,0 +1,41 @@
+{
+  "name": "ventureflow-ai",
+  "version": "0.1.0",
+  "description": "The Operating System For Startup Fundraising",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "build:prod": "turbo build --filter=!@ventureflow/storybook",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint -- --fix",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "test:watch": "turbo test -- --watch",
+    "test:coverage": "turbo test -- --coverage",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo clean && find . -type d -name node_modules -prune -exec rm -rf {} +",
+    "db:generate": "turbo db:generate",
+    "db:migrate": "turbo db:migrate",
+    "db:seed": "turbo db:seed",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "deploy:staging": "turbo deploy:staging",
+    "deploy:production": "turbo deploy:production"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.0",
+    "prettier": "^3.1.1",
+    "turbo": "^1.10.16",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "npm@10.2.4"
+}
