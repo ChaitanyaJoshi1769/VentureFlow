@@ -32,6 +32,9 @@ import { SalesforceSyncModule } from './modules/salesforce-sync/salesforce-sync.
 import { AdminDashboardModule } from './modules/admin-dashboard/admin-dashboard.module';
 import { AdvancedAnalyticsModule } from './modules/advanced-analytics/advanced-analytics.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { WebSocketModule } from './modules/websocket-gateway/websocket.module';
+import { PushNotificationsModule } from './modules/push-notifications/push-notifications.module';
+import { MobileAuthModule } from './modules/mobile-auth/mobile-auth.module';
 import { PrismaService } from './common/services/prisma.service';
 
 const logger = new Logger('AppModule');
@@ -93,12 +96,17 @@ const logger = new Logger('AppModule');
     AdminDashboardModule,
     AdvancedAnalyticsModule,
     BillingModule,
+
+    // Feature Modules - Phase 7 Real-Time & Mobile
+    WebSocketModule,
+    PushNotificationsModule,
+    MobileAuthModule,
   ],
   controllers: [],
   providers: [PrismaService],
 })
 export class AppModule {
   constructor(private prisma: PrismaService) {
-    logger.log('VentureFlow AI Backend initialized with 29/29 core modules (Phase 2-6) - PRODUCTION READY');
+    logger.log('VentureFlow AI Backend initialized with 32/32 core modules (Phase 2-7) - PRODUCTION READY');
   }
 }
