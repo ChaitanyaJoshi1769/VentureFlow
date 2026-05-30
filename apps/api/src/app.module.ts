@@ -29,6 +29,9 @@ import { SlackIntegrationModule } from './modules/slack-integration/slack-integr
 import { StripeIntegrationModule } from './modules/stripe-integration/stripe-integration.module';
 import { GmailSyncModule } from './modules/gmail-sync/gmail-sync.module';
 import { SalesforceSyncModule } from './modules/salesforce-sync/salesforce-sync.module';
+import { AdminDashboardModule } from './modules/admin-dashboard/admin-dashboard.module';
+import { AdvancedAnalyticsModule } from './modules/advanced-analytics/advanced-analytics.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { PrismaService } from './common/services/prisma.service';
 
 const logger = new Logger('AppModule');
@@ -85,12 +88,17 @@ const logger = new Logger('AppModule');
     StripeIntegrationModule,
     GmailSyncModule,
     SalesforceSyncModule,
+
+    // Feature Modules - Phase 6 Admin & Analytics
+    AdminDashboardModule,
+    AdvancedAnalyticsModule,
+    BillingModule,
   ],
   controllers: [],
   providers: [PrismaService],
 })
 export class AppModule {
   constructor(private prisma: PrismaService) {
-    logger.log('VentureFlow AI Backend initialized with 26/26 core modules (Phase 2-5) - PRODUCTION READY');
+    logger.log('VentureFlow AI Backend initialized with 29/29 core modules (Phase 2-6) - PRODUCTION READY');
   }
 }
