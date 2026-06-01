@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "VentureFlow",
+    "slug": "ventureflow",
+    "version": "1.0.0",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTabletMode": true,
+      "requireFullScreen": false,
+      "bundleIdentifier": "com.ventureflow.app"
+    },
+    "android": {
+      "package": "com.ventureflow.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.BIOMETRIC"
+      ]
+    },
+    "plugins": [
+      ["expo-face-detection"],
+      ["expo-local-authentication"]
+    ]
+  }
+}
